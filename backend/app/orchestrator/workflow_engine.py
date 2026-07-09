@@ -61,10 +61,15 @@ class WorkflowEngine:
             "actions": [],
         }
 
-    def _error_display(self, title: str, message: str) -> dict[str, Any]:
+    def _error_display(
+        self,
+        title: str,
+        message: str,
+        subtitle: str = "The workflow could not continue.",
+    ) -> dict[str, Any]:
         return {
             "title": title,
-            "subtitle": "The workflow could not continue because required context is missing.",
+            "subtitle": subtitle,
             "sections": [
                 {
                     "heading": "Workflow Error",
@@ -136,7 +141,11 @@ class WorkflowEngine:
         message = f"Cannot generate {stage}: missing required workflow data: {missing_text}."
         return self._response(
             status="workflow_context_error",
-            display_data=self._error_display("Missing Workflow Context", message),
+            display_data=self._error_display(
+                "Missing Workflow Context",
+                message,
+                subtitle="The workflow could not continue because required context is missing.",
+            ),
             agent_data={
                 "error": "missing_required_stage_data",
                 "stage": stage,
@@ -150,6 +159,20 @@ class WorkflowEngine:
         if isinstance(result, dict) and "agent_data" in result:
             return result.get("agent_data") or {}, result.get("display_data")
         return result, None
+
+    def _stage_generation_error_response(self, stage: str, exc: Exception) -> dict[str, Any]:
+        title = f"{stage.replace('_', ' ').title()} Generation Failed"
+        message = f"{stage.replace('_', ' ').title()} could not be generated: {exc}"
+        return self._response(
+            status=f"{stage}_generation_error",
+            display_data=self._error_display(title, message),
+            agent_data={
+                "error": f"{stage}_generation_failed",
+                "message": str(exc),
+            },
+            assistant_message=message,
+            next_expected_action="retry_or_request_changes",
+        )
 
     def _generate_stage(self, stage: str) -> dict[str, Any]:
         if stage == "discovery":
@@ -187,19 +210,7 @@ class WorkflowEngine:
                 agent_data, display_data = result, self._stage_display_data(stage, result)
             except Exception as exc:
                 logger.exception("After Recommendation Agent: response generated successfully? False")
-                return self._response(
-                    status="recommendation_generation_error",
-                    display_data=self._error_display(
-                        "Recommendation Generation Failed",
-                        f"Recommendation could not be generated: {exc}",
-                    ),
-                    agent_data={
-                        "error": "recommendation_generation_failed",
-                        "message": str(exc),
-                    },
-                    assistant_message=f"Recommendation could not be generated: {exc}",
-                    next_expected_action="retry_or_request_changes",
-                )
+                return self._stage_generation_error_response("recommendation", exc)
             logger.info("After Recommendation Agent: response generated successfully? %s", True)
         elif stage == "architecture":
             missing = [
@@ -209,12 +220,16 @@ class WorkflowEngine:
             ]
             if missing:
                 return self._missing_stage_data_response("architecture", missing)
-            result = generate_architecture(
-                self.state.get("discovery"),
-                self.state.get("knowledge"),
-                self.state.get("recommendation"),
-            )
-            agent_data, display_data = self._normalize_agent_result(result)
+            try:
+                result = generate_architecture(
+                    self.state.get("discovery"),
+                    self.state.get("knowledge"),
+                    self.state.get("recommendation"),
+                )
+                agent_data, display_data = self._normalize_agent_result(result)
+            except Exception as exc:
+                logger.exception("Architecture generation failed")
+                return self._stage_generation_error_response("architecture", exc)
         elif stage == "validation":
             missing = [
                 required
@@ -223,13 +238,17 @@ class WorkflowEngine:
             ]
             if missing:
                 return self._missing_stage_data_response("validation", missing)
-            result = generate_validation(
-                self.state.get("discovery"),
-                self.state.get("knowledge"),
-                self.state.get("recommendation"),
-                self.state.get("architecture"),
-            )
-            agent_data, display_data = self._normalize_agent_result(result)
+            try:
+                result = generate_validation(
+                    self.state.get("discovery"),
+                    self.state.get("knowledge"),
+                    self.state.get("recommendation"),
+                    self.state.get("architecture"),
+                )
+                agent_data, display_data = self._normalize_agent_result(result)
+            except Exception as exc:
+                logger.exception("Validation generation failed")
+                return self._stage_generation_error_response("validation", exc)
         elif stage == "output":
             missing = [
                 required
@@ -244,14 +263,18 @@ class WorkflowEngine:
             ]
             if missing:
                 return self._missing_stage_data_response("output", missing)
-            result = generate_output(
-                self.state.get("discovery"),
-                self.state.get("knowledge"),
-                self.state.get("recommendation"),
-                self.state.get("architecture"),
-                self.state.get("validation"),
-            )
-            agent_data, display_data = self._normalize_agent_result(result)
+            try:
+                result = generate_output(
+                    self.state.get("discovery"),
+                    self.state.get("knowledge"),
+                    self.state.get("recommendation"),
+                    self.state.get("architecture"),
+                    self.state.get("validation"),
+                )
+                agent_data, display_data = self._normalize_agent_result(result)
+            except Exception as exc:
+                logger.exception("Output generation failed")
+                return self._stage_generation_error_response("output", exc)
         else:
             return self._response(
                 status="unsupported",

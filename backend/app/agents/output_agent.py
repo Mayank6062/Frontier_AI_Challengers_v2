@@ -75,7 +75,10 @@ def _create_client() -> AzureOpenAI:
         api_key=_get_required_env("AZURE_OPENAI_API_KEY"),
         azure_endpoint=_get_required_env("AZURE_OPENAI_ENDPOINT"),
         api_version=_get_required_env("AZURE_OPENAI_API_VERSION"),
-        timeout=60.0,
+        # Output generation assembles a full standalone HTML file, markdown report,
+        # Terraform, and 6 Mermaid diagrams in one completion — this routinely
+        # takes longer than the 60s budget used by the lighter agents.
+        timeout=240.0,
     )
 
 

@@ -11,12 +11,21 @@ type DocumentViewerProps = {
   displayData?: DisplayData | null;
 };
 
+// Agent JSON isn't schema-enforced at the item level, so list/table values can
+// arrive as strings, numbers, or nested objects/arrays depending on what the LLM returns.
+function renderValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "Not specified";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
 function renderSection(section: DisplaySection) {
   if (section?.items && Array.isArray(section.items) && section.items.length) {
     return (
       <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
-        {section.items.map((item) => (
-          <li key={item}>{item}</li>
+        {section.items.map((item, index) => (
+          <li key={typeof item === "string" ? item : index}>{renderValue(item)}</li>
         ))}
       </ul>
     );
@@ -45,7 +54,7 @@ function renderSection(section: DisplaySection) {
                 <th className="w-1/3 bg-slate-50 px-4 py-3 font-medium text-slate-700">
                   {label}
                 </th>
-                <td className="px-4 py-3 text-slate-600">{String(value)}</td>
+                <td className="px-4 py-3 text-slate-600">{renderValue(value)}</td>
               </tr>
             ))}
           </tbody>
@@ -54,7 +63,11 @@ function renderSection(section: DisplaySection) {
     );
   }
 
-  return <p className="text-sm leading-6 text-slate-600">{section.content ?? "Not specified"}</p>;
+  return (
+    <p className="text-sm leading-6 text-slate-600">
+      {typeof section.content === "string" ? section.content : renderValue(section.content ?? "Not specified")}
+    </p>
+  );
 }
 
 export function DocumentViewer({ displayData }: DocumentViewerProps) {
