@@ -33,8 +33,9 @@ ARCHITECTURE_FIELDS = {
     "architecture_summary",
 }
  
-# Expected diagram titles (6 comprehensive enterprise diagrams — quality over quantity)
+# Expected diagram titles (7 comprehensive enterprise diagrams — quality over quantity)
 EXPECTED_DIAGRAM_TITLES = [
+    "ExecutiveArchitecturePoster",
     "Overall Solution Architecture",
     "Enterprise Architecture Design",
     "System Design",
@@ -320,22 +321,30 @@ def _build_architecture_display_data(architecture: dict[str, Any]) -> dict[str, 
         },
     ]
  
-    # ── Executive Poster (rendered as SVG) ────────────────────────────
-    poster = architecture.get("executive_poster")
-    if isinstance(poster, dict) and poster.get("sections"):
-        sections.append({
-            "heading": "Executive Architecture Poster",
-            "type": "executive_poster",
-            "content": _safe_str(poster.get("subtitle", "")),
-            "poster": poster,
-        })
- 
-    # ── Individual Enterprise Diagrams ────────────────────────────────
+    # ── Individual Enterprise Diagrams (7 total) ─────────────────────────
+    # DIAGRAM 1: ExecutiveArchitecturePoster (component-based, not Mermaid)
+    # DIAGRAMS 2-7: Mermaid diagrams
     diagrams = architecture.get("architecture_diagrams", [])
     if isinstance(diagrams, list):
-        for diag in diagrams:
+        for idx, diag in enumerate(diagrams):
             if not isinstance(diag, dict):
                 continue
+ 
+            diagram_type = _safe_str(diag.get("diagram_type", "flowchart"))
+           
+            # ── DIAGRAM 1: Executive Poster (component-based) ──
+            if diagram_type == "executive_poster":
+                poster = diag.get("executive_poster")
+                if isinstance(poster, dict) and poster.get("sections"):
+                    sections.append({
+                        "heading": _safe_str(diag.get("title", "ExecutiveArchitecturePoster")),
+                        "type": "executive_poster",
+                        "content": _safe_str(diag.get("description", "")),
+                        "poster": poster,
+                    })
+                continue  # Skip to next diagram
+ 
+            # ── DIAGRAMS 2-7: Mermaid diagrams ──
             mermaid_code = diag.get("mermaid", "")
             svg_layout = diag.get("svg_layout") or {}
             drawio_xml = diag.get("drawio_xml", "")
@@ -352,7 +361,7 @@ def _build_architecture_display_data(architecture: dict[str, Any]) -> dict[str, 
                 "heading": _safe_str(diag.get("title", "Architecture Diagram")),
                 "type": "architecture_diagram",
                 "content": _safe_str(diag.get("description", "")),
-                "diagram_type": _safe_str(diag.get("diagram_type", "flowchart")),
+                "diagram_type": diagram_type,
                 "diagrams": [
                     {
                         "title": _safe_str(diag.get("title", "Architecture Diagram")),
@@ -427,3 +436,4 @@ def generate_architecture(
         "agent_data": agent_data,
         "display_data": _build_architecture_display_data(agent_data),
     }
+ 

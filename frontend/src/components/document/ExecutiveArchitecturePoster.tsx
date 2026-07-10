@@ -439,5 +439,3 @@ export function ExecutiveArchitecturePoster({ poster, description }: Props) {
     </div>
   );
 }
- 
- 
