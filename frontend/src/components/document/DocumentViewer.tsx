@@ -1,16 +1,21 @@
 import { FileText } from "lucide-react";
-import mermaid from "mermaid";
-import { useEffect, useId } from "react";
-
 import { Card } from "@/components/common/Card";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Loading } from "@/components/common/Loading";
 import type { DisplayData, DisplaySection } from "@/types/workflow";
-
+import {
+  getHeadingIcon,
+  isArchitectureDisplayData,
+  renderArchitectureSection,
+} from "@/components/document/ArchitectureRenderer";
+import {
+  EnterpriseMermaidCard,
+} from "@/components/document/EnterpriseMermaidCard";
+ 
 type DocumentViewerProps = {
   displayData?: DisplayData | null;
 };
-
+ 
 // Agent JSON isn't schema-enforced at the item level, so list/table values can
 // arrive as strings, numbers, or nested objects/arrays depending on what the LLM returns.
 function renderValue(value: unknown): string {
@@ -19,7 +24,7 @@ function renderValue(value: unknown): string {
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
-
+ 
 function renderSection(section: DisplaySection) {
   if (section?.items && Array.isArray(section.items) && section.items.length) {
     return (
@@ -30,12 +35,12 @@ function renderSection(section: DisplaySection) {
       </ul>
     );
   }
-
+ 
   if (section?.diagrams && Array.isArray(section.diagrams) && section.diagrams.length) {
     return (
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="space-y-4">
         {section.diagrams.map((diagram, idx) => (
-          <MermaidDiagram key={diagram.title + idx} title={diagram.title} code={diagram.code} />
+          <EnterpriseMermaidCard key={diagram.title + idx} title={diagram.title} code={diagram.code} />
         ))}
       </div>
     );
@@ -44,7 +49,7 @@ function renderSection(section: DisplaySection) {
     const rows = Array.isArray(section.rows)
       ? (section.rows as unknown[]).map((row, index) => [`Item ${index + 1}`, String(row)])
       : Object.entries(section.rows as Record<string, unknown>);
-
+ 
     return (
       <div className="overflow-hidden rounded-md border border-slate-200">
         <table className="w-full text-left text-sm">
@@ -62,14 +67,14 @@ function renderSection(section: DisplaySection) {
       </div>
     );
   }
-
+ 
   return (
     <p className="text-sm leading-6 text-slate-600">
       {typeof section.content === "string" ? section.content : renderValue(section.content ?? "Not specified")}
     </p>
   );
 }
-
+ 
 export function DocumentViewer({ displayData }: DocumentViewerProps) {
   // Loading: displayData undefined (not yet received)
   if (displayData === undefined) {
@@ -81,7 +86,7 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
       </Card>
     );
   }
-
+ 
   // Empty: null or missing sections or empty object
   if (!displayData || !displayData.sections || !Array.isArray(displayData.sections) || displayData.sections.length === 0) {
     return (
@@ -92,7 +97,55 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
       </Card>
     );
   }
-
+ 
+  // ── Architecture-specific rendering ──────────────────────────────
+  const isArchitecture = isArchitectureDisplayData(displayData.sections);
+ 
+  if (isArchitecture) {
+    return (
+      <Card className="overflow-hidden">
+        {/* Header */}
+        <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-950">
+                {displayData.title ?? "Architecture Design Report"}
+              </h2>
+              {displayData.subtitle ? (
+                <p className="mt-1 text-sm text-slate-500">{displayData.subtitle}</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+ 
+        {/* Sections */}
+        <div className="divide-y divide-slate-100">
+          {displayData.sections.map((section) => {
+            const icon = getHeadingIcon(section.heading);
+            return (
+              <section
+                key={section.heading ?? Math.random()}
+                className="p-5 sm:p-6"
+              >
+                <div className="mb-4 flex items-center gap-2">
+                  {icon}
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {section.heading ?? "Section"}
+                  </h3>
+                </div>
+                {renderArchitectureSection(section)}
+              </section>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  }
+ 
+  // ── Default rendering for non-architecture stages ────────────────
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-slate-200 bg-white p-5 sm:p-6">
@@ -117,44 +170,5 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
         ))}
       </div>
     </Card>
-  );
-}
-
-function MermaidDiagram({ title, code }: { title?: string; code?: string }) {
-  const id = useId();
-  const containerId = `mermaid-${id}`;
-
-  useEffect(() => {
-    if (!code) return;
-
-    const isMermaid = /(?:graph|sequenceDiagram|classDiagram|gantt|flowchart|stateDiagram)/i.test(code) || /```mermaid/.test(code);
-    if (!isMermaid) return;
-
-    try {
-      mermaid.initialize({ startOnLoad: false, securityLevel: "loose" });
-      const renderCode = code.replace(/```mermaid\s*/i, "").replace(/```$/, "");
-      // mermaid.render returns a Promise in modern mermaid versions
-      Promise.resolve(mermaid.render(containerId, renderCode)).then((result: any) => {
-        const svgCode = result?.svg ?? result;
-        const el = document.getElementById(containerId);
-        if (el) el.innerHTML = svgCode;
-      });
-    } catch (e) {
-      // ignore render errors and leave code block
-    }
-  }, [code, containerId]);
-
-  return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-      {title ? <div className="mb-2 text-sm font-medium text-slate-700">{title}</div> : null}
-      {code ? (
-        <div>
-          <div id={containerId} className="mermaid overflow-auto" />
-          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs text-slate-500">{code}</pre>
-        </div>
-      ) : (
-        <div className="text-xs text-slate-500">Diagram placeholder</div>
-      )}
-    </div>
   );
 }

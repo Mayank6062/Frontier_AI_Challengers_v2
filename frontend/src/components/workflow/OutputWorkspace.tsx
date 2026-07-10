@@ -1,15 +1,15 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-
+ 
 import { Card } from "@/components/common/Card";
 import { Button } from "@/components/common/Button";
 import { cn } from "@/utils/cn";
 import type { DisplayData } from "@/types/workflow";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useWorkflow } from "@/hooks/useWorkflow";
-
+ 
 type Tab = "overview" | "html" | "markdown" | "terraform";
-
+ 
 export function OutputWorkspace({ displayData }: { displayData?: DisplayData | null }) {
   const [tab, setTab] = useState<Tab>("overview");
   const { workflowContext } = useWorkflow();
@@ -18,15 +18,15 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
     subtitle: "No output available",
     sections: [],
   };
-
+ 
   const outputContext = (workflowContext && (workflowContext as any).output) || {};
   // downloads may live under outputContext.downloads or directly under outputContext
   const downloads = outputContext.downloads ?? outputContext ?? {};
-
+ 
   const html = String(downloads.html ?? "");
   const markdown = String(downloads.markdown ?? "");
   const terraform = String(downloads.terraform ?? "");
-
+ 
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-slate-200 bg-white p-5 sm:p-6">
@@ -39,7 +39,7 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
           </div>
         </div>
       </div>
-
+ 
       <div className="p-4 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <TabButton active={tab === "overview"} onClick={() => setTab("overview")}>
@@ -53,7 +53,7 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
             Terraform Preview
           </TabButton>
         </div>
-
+ 
         <div>
           {tab === "overview" && (
             <div className="space-y-4">
@@ -80,7 +80,7 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
                   )}
                 </div>
           )}
-
+ 
           {tab === "html" && (
             <div className="h-[60vh] w-full overflow-hidden rounded-lg border border-slate-200">
               {html ? (
@@ -95,7 +95,7 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
               )}
             </div>
           )}
-
+ 
           {tab === "markdown" && (
             <div className="prose max-w-none rounded-lg border border-slate-200 bg-white p-6">
               {markdown ? (
@@ -105,7 +105,7 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
               )}
             </div>
           )}
-
+ 
           {tab === "terraform" && (
             <div>
               {terraform ? (
@@ -122,7 +122,7 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
     </Card>
   );
 }
-
+ 
 function TabButton({ active, children, onClick }: { active?: boolean; children: any; onClick?: () => void }) {
   return (
     <button
