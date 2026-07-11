@@ -115,8 +115,8 @@ def validate_mermaid_diagram(mermaid_code: str) -> Tuple[bool, List[str]]:
     subgraph_count = len(re.findall(r'\bsubgraph\b', mermaid_code, re.IGNORECASE))
     end_count = len(re.findall(r'\bend\b', mermaid_code, re.IGNORECASE))
    
-    if subgraph_count > 0:
-        errors.append(f"WARNING: Found {subgraph_count} subgraphs. Subgraphs often cause rendering failures. Consider removing them.")
+    if subgraph_count > 4:
+        errors.append(f"CRITICAL: Too many subgraphs ({subgraph_count}). Maximum: 4. Use subgraphs only for major architectural layers.")
    
     if subgraph_count > end_count:
         errors.append(f"CRITICAL: Unclosed subgraph: {subgraph_count} subgraphs, {end_count} ends")
@@ -125,13 +125,16 @@ def validate_mermaid_diagram(mermaid_code: str) -> Tuple[bool, List[str]]:
    
     # Check for nested subgraphs (subgraph inside subgraph) - VERY problematic
     subgraph_depth = 0
+    max_depth = 0
     for line in lines:
         if re.search(r'\bsubgraph\b', line, re.IGNORECASE):
             subgraph_depth += 1
-            if subgraph_depth > 1:
-                errors.append("CRITICAL: Nested subgraphs detected (subgraph inside subgraph). This WILL cause rendering failures. Remove nested subgraphs.")
+            max_depth = max(max_depth, subgraph_depth)
         if re.search(r'\bend\b', line, re.IGNORECASE):
             subgraph_depth -= 1
+   
+    if max_depth > 1:
+        errors.append(f"CRITICAL: Nested subgraphs detected (depth={max_depth}). Subgraphs MUST be flat (no nesting). This WILL cause rendering failures.")
    
     # 5. Check for invalid arrow syntax
     # We standardize on --> and allow --- for undirected, but reject complex arrows
@@ -218,22 +221,64 @@ def validate_mermaid_diagram(mermaid_code: str) -> Tuple[bool, List[str]]:
     if undefined_classes:
         errors.append(f"CRITICAL: Classes used but not defined: {', '.join(sorted(undefined_classes))}")
    
-    # 12. Check for node/edge count (CRITICAL for enterprise readability)
+    # 12. Check for node/edge count (CRITICAL for enterprise readability and minimum complexity)
     node_count = len(node_ids)
     edge_pattern = r'[A-Za-z0-9_]+\s*(?:-->|<--|---|->|<-|\-\.\->|<\.-|\.\->|<\.-!>|o--o|<\.\.>|\|.*?\||==|==>|<==|x--x)\s*[A-Za-z0-9_]+'
     edge_count = len(re.findall(edge_pattern, mermaid_code))
    
-    if node_count < 3:
-        warnings.append(f"WARNING: Only {node_count} nodes. Consider adding more detail.")
-    elif node_count > 18:
-        errors.append(f"CRITICAL: Too many nodes ({node_count}). Maximum recommended: 18. MUST split into multiple diagrams.")
+    # ENFORCE MINIMUM COMPLEXITY (Enterprise requirement)
+    if node_count < 8:
+        errors.append(f"CRITICAL: Too few nodes ({node_count}). Enterprise diagrams require MINIMUM 8 nodes. Add more detail.")
+    elif node_count < 10:
+        warnings.append(f"WARNING: Low node count ({node_count}). Recommended: 10-14 for optimal enterprise communication.")
+   
+    if edge_count < 7:
+        errors.append(f"CRITICAL: Too few edges ({node_count}). Enterprise diagrams require MINIMUM 7 edges showing relationships.")
+   
+    # ENFORCE MAXIMUM LIMITS
+    if node_count > 18:
+        errors.append(f"CRITICAL: Too many nodes ({node_count}). Maximum: 18. MUST split into multiple diagrams.")
     elif node_count > 14:
         warnings.append(f"WARNING: High node count ({node_count}). Recommended: 10-14 for optimal readability.")
    
     if edge_count > 30:
-        errors.append(f"CRITICAL: Too many edges ({edge_count}). Maximum recommended: 30. MUST simplify or split diagram.")
+        errors.append(f"CRITICAL: Too many edges ({edge_count}). Maximum: 30. MUST simplify or split diagram.")
     elif edge_count > 20:
         warnings.append(f"WARNING: High edge count ({edge_count}). Recommended: 15-20 for optimal clarity.")
+   
+    # 12a. Check for business-friendly labels (Azure services should have purposes)
+    # Look for labels without <br/> - these might be abbreviations or generic names
+    label_without_purpose_pattern = r'[\[\(\{]"([A-Za-z0-9\s]{3,30})"[\]\)\}]'
+    labels_needing_purpose = []
+    for line_num, line in enumerate(lines, start=1):
+        if line.strip().startswith('%%') or line.strip().startswith('classDef'):
+            continue
+        matches = re.findall(label_without_purpose_pattern, line)
+        for label in matches:
+            # Check if it looks like an Azure service or common abbreviation
+            if any(keyword in label.lower() for keyword in ['azure', 'service', 'api', 'database', 'storage', 'monitor']):
+                if '<br/>' not in line:
+                    labels_needing_purpose.append((line_num, label))
+   
+    if labels_needing_purpose:
+        for line_num, label in labels_needing_purpose[:3]:  # Show first 3
+            warnings.append(f"WARNING: Node '{label}' on line {line_num} should include business purpose. Use: '{label}<br/>(Purpose)'")
+   
+    # 12b. Check for common abbreviations that should be spelled out
+    common_abbreviations = {
+        'ADF': 'Azure Data Factory',
+        'APIM': 'Azure API Management',
+        'AuthSvc': 'Authentication Service',
+        'API GW': 'API Gateway',
+        'DB': 'Database',
+        'DW': 'Data Warehouse',
+    }
+    for abbrev, full_name in common_abbreviations.items():
+        # Look for abbreviation in node labels
+        abbrev_pattern = rf'[\[\(\{{]"?{re.escape(abbrev)}"?[\]\)\}}]'
+        if re.search(abbrev_pattern, mermaid_code):
+            warnings.append(f"WARNING: Abbreviation '{abbrev}' detected. Use full name: '{full_name}' with business purpose.")
+   
    
     # 13. Check for edge references to undefined nodes (CRITICAL)
     edge_ref_pattern = r'([A-Za-z0-9_]+)\s*(?:-->|<--|---|->|<-|\-\.\->|<\.-)\s*([A-Za-z0-9_]+)'
@@ -386,10 +431,11 @@ def sanitize_mermaid_code(mermaid_code: str) -> str:
         "]+", flags=re.UNICODE)
     mermaid_code = emoji_pattern.sub('', mermaid_code)
    
-    # Remove ALL subgraphs (they cause frequent rendering failures)
+    # Fix nested subgraphs (keep subgraphs but flatten nesting)
+    # Strategy: Keep only top-level subgraphs, remove nested ones
     lines = mermaid_code.split('\n')
     filtered_lines = []
-    in_subgraph = 0
+    subgraph_depth = 0
     subgraph_labels = {}
    
     for line in lines:
@@ -397,25 +443,65 @@ def sanitize_mermaid_code(mermaid_code: str) -> str:
        
         # Track subgraph entry
         if stripped.startswith('subgraph'):
-            in_subgraph += 1
-            # Extract subgraph label for context
-            match = re.search(r'subgraph\s+(.+)', line, re.IGNORECASE)
-            if match:
-                subgraph_labels[in_subgraph] = match.group(1).strip()
-            # Add comment indicating removed subgraph
-            filtered_lines.append(f'%% Subgraph removed: {subgraph_labels.get(in_subgraph, "unnamed")}')
+            if subgraph_depth == 0:
+                # Top-level subgraph - keep it
+                filtered_lines.append(line)
+                match = re.search(r'subgraph\s+(.+)', line, re.IGNORECASE)
+                if match:
+                    subgraph_labels[subgraph_depth] = match.group(1).strip()
+            else:
+                # Nested subgraph - remove it but keep a comment
+                match = re.search(r'subgraph\s+(.+)', line, re.IGNORECASE)
+                nested_label = match.group(1).strip() if match else 'unnamed'
+                filtered_lines.append(f'%% Nested subgraph removed: {nested_label}')
+            subgraph_depth += 1
             continue
        
         # Track subgraph exit
-        if stripped == 'end' and in_subgraph > 0:
-            in_subgraph -= 1
+        if stripped == 'end':
+            subgraph_depth -= 1
+            if subgraph_depth >= 0:
+                # Only keep 'end' for top-level subgraphs
+                filtered_lines.append(line)
             continue
        
-        # Keep lines outside subgraphs
-        if in_subgraph == 0:
-            filtered_lines.append(line)
+        # Keep all other lines
+        filtered_lines.append(line)
    
     mermaid_code = '\n'.join(filtered_lines)
+   
+    # Limit subgraph count to 4 (enterprise architecture best practice)
+    subgraph_count = len(re.findall(r'\bsubgraph\b', mermaid_code, re.IGNORECASE))
+    if subgraph_count > 4:
+        # Remove excess subgraphs, keeping first 4
+        lines = mermaid_code.split('\n')
+        filtered_lines = []
+        current_subgraph_count = 0
+        in_excess_subgraph = False
+       
+        for line in lines:
+            stripped = line.strip().lower()
+           
+            if stripped.startswith('subgraph'):
+                current_subgraph_count += 1
+                if current_subgraph_count <= 4:
+                    filtered_lines.append(line)
+                    in_excess_subgraph = False
+                else:
+                    in_excess_subgraph = True
+                    match = re.search(r'subgraph\s+(.+)', line, re.IGNORECASE)
+                    label = match.group(1).strip() if match else 'unnamed'
+                    filtered_lines.append(f'%% Excess subgraph removed (max 4): {label}')
+                continue
+           
+            if stripped == 'end' and in_excess_subgraph:
+                in_excess_subgraph = False
+                continue
+           
+            if not in_excess_subgraph:
+                filtered_lines.append(line)
+       
+        mermaid_code = '\n'.join(filtered_lines)
    
     # Ensure proper spacing around arrows for readability
     mermaid_code = re.sub(r'([A-Za-z0-9_\]\)\}])(-->|<--|---)', r'\1 \2', mermaid_code)
@@ -493,3 +579,4 @@ def wrap_drawio_xml(xml_content: str) -> str:
 </mxfile>'''
    
     return wrapped
+ 

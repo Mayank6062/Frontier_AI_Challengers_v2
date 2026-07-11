@@ -162,10 +162,12 @@ def _normalize_diagram(raw: Any) -> dict[str, Any]:
     if not isinstance(svg_layout, dict):
         svg_layout = {}
  
+    diagram_type = _safe_str(raw.get("diagram_type", "flowchart"))
+ 
     normalized = {
         "title": _safe_str(raw.get("title", "Diagram")),
         "description": _safe_str(raw.get("description", "")),
-        "diagram_type": _safe_str(raw.get("diagram_type", "flowchart")),
+        "diagram_type": diagram_type,
         "mermaid": _safe_str(raw.get("mermaid", "")),
         "drawio_xml": _safe_str(raw.get("drawio_xml", "")),
         "svg_layout": svg_layout,
@@ -174,9 +176,14 @@ def _normalize_diagram(raw: Any) -> dict[str, Any]:
         "architecture_principles": _as_list(raw.get("architecture_principles")),
         "assumptions": _as_list(raw.get("assumptions")),
         "explanation": _as_list(raw.get("explanation")),
+        # Preserve executive_poster payload so _build_architecture_display_data can access it
+        "executive_poster": raw.get("executive_poster") if diagram_type == "executive_poster" else None,
+        "business_summary": _safe_str(raw.get("business_summary", "")),
     }
    
-    # Validate and auto-fix Mermaid and Draw.io XML
+    # Validate and auto-fix Mermaid and Draw.io XML (skip for executive poster — no mermaid)
+    if diagram_type == "executive_poster":
+        return normalized
     return _validate_and_fix_diagram(normalized)
  
  
@@ -335,13 +342,18 @@ def _build_architecture_display_data(architecture: dict[str, Any]) -> dict[str, 
             # ── DIAGRAM 1: Executive Poster (component-based) ──
             if diagram_type == "executive_poster":
                 poster = diag.get("executive_poster")
-                if isinstance(poster, dict) and poster.get("sections"):
+                if isinstance(poster, dict):
+                    # Ensure sections list exists even if LLM omits it
+                    if not poster.get("sections"):
+                        print(f"⚠️  ExecutiveArchitecturePoster: 'sections' missing — poster will not render")
                     sections.append({
                         "heading": _safe_str(diag.get("title", "ExecutiveArchitecturePoster")),
                         "type": "executive_poster",
                         "content": _safe_str(diag.get("description", "")),
                         "poster": poster,
                     })
+                else:
+                    print(f"⚠️  ExecutiveArchitecturePoster: 'executive_poster' key missing or not a dict — skipping")
                 continue  # Skip to next diagram
  
             # ── DIAGRAMS 2-7: Mermaid diagrams ──
@@ -361,6 +373,7 @@ def _build_architecture_display_data(architecture: dict[str, Any]) -> dict[str, 
                 "heading": _safe_str(diag.get("title", "Architecture Diagram")),
                 "type": "architecture_diagram",
                 "content": _safe_str(diag.get("description", "")),
+                "business_summary": _safe_str(diag.get("business_summary", "")),
                 "diagram_type": diagram_type,
                 "diagrams": [
                     {
@@ -372,8 +385,13 @@ def _build_architecture_display_data(architecture: dict[str, Any]) -> dict[str, 
                 "svg_layout": svg_layout if isinstance(svg_layout, dict) else {},
                 "metadata": {
                     "key_components": _as_list(diag.get("key_components")),
+                    "component_explanations": diag.get("component_explanations", []) if isinstance(diag.get("component_explanations"), list) else [],
                     "design_decisions": _as_list(diag.get("design_decisions")),
+                    "business_benefits": _as_list(diag.get("business_benefits")),
+                    "technical_benefits": _as_list(diag.get("technical_benefits")),
                     "architecture_principles": _as_list(diag.get("architecture_principles")),
+                    "risks": _as_list(diag.get("risks")),
+                    "recommendations": _as_list(diag.get("recommendations")),
                     "assumptions": _as_list(diag.get("assumptions")),
                     "explanation": _as_list(diag.get("explanation")),
                 },

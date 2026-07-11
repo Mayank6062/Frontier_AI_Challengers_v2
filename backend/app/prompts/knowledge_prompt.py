@@ -320,16 +320,6 @@ Structure (IF solutions exist):
   ]
 }
  
-REQUIRED:
-- solutions MUST be an array
-- If no solutions: return empty array [] (not null)
-- business_summary MUST be "No previously approved enterprise solutions are available." if empty
-- If solutions exist:
-  - Each object MUST have: name, description, outcome
-  - Each name: 2-5 words
-  - Each description: 30-70 words
-  - Each outcome: 30-70 words
- 
 FORBIDDEN:
 - "Not Specified"
 - "Unknown"

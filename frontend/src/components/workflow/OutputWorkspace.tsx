@@ -1,18 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
  
 import { Card } from "@/components/common/Card";
-import { Button } from "@/components/common/Button";
 import { cn } from "@/utils/cn";
 import type { DisplayData } from "@/types/workflow";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useWorkflow } from "@/hooks/useWorkflow";
+import { EnterpriseArchitectureBlueprint } from "@/components/output/EnterpriseArchitectureBlueprint";
  
 type Tab = "overview" | "html" | "markdown" | "terraform";
  
 export function OutputWorkspace({ displayData }: { displayData?: DisplayData | null }) {
   const [tab, setTab] = useState<Tab>("overview");
   const { workflowContext } = useWorkflow();
+  const blueprintRef = useRef<HTMLDivElement>(null);
+ 
   const safeDisplayData = displayData ?? {
     title: "No output",
     subtitle: "No output available",
@@ -26,6 +28,37 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
   const html = String(downloads.html ?? "");
   const markdown = String(downloads.markdown ?? "");
   const terraform = String(downloads.terraform ?? "");
+ 
+  const downloadPoster = (ref: React.RefObject<HTMLDivElement>, name: string) => {
+    if (!ref.current) return;
+   
+    const element = ref.current;
+    const canvas = document.createElement("canvas");
+    const rect = element.getBoundingClientRect();
+   
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+   
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+   
+    ctx.scale(2, 2);
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+   
+    // HTML to canvas conversion - use html2canvas if available
+    const html = element.outerHTML;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+   
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${name}-${new Date().toISOString().split("T")[0]}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
  
   return (
     <Card className="overflow-hidden">
@@ -56,29 +89,30 @@ export function OutputWorkspace({ displayData }: { displayData?: DisplayData | n
  
         <div>
           {tab === "overview" && (
-            <div className="space-y-4">
-                  {Array.isArray(safeDisplayData.sections) && safeDisplayData.sections.length > 0 ? (
-                    safeDisplayData.sections.map((section) => (
-                      <section key={section.heading ?? Math.random()} className="rounded-lg border border-slate-100 bg-white p-4">
-                        <h3 className="mb-2 text-sm font-semibold text-slate-800">{section.heading ?? ""}</h3>
-                        {section.content ? <p className="text-sm text-slate-600">{section.content}</p> : null}
-                        {section.type === "download_card" && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {(section as any).downloads?.map((d: any) => (
-                              <Button key={d.key} variant="secondary" onClick={() => {
-                                if (d.key === 'html') setTab('html');
-                                if (d.key === 'markdown') setTab('markdown');
-                                if (d.key === 'terraform') setTab('terraform');
-                              }}>{d.label}</Button>
-                            ))}
-                          </div>
-                        )}
-                      </section>
-                    ))
-                  ) : (
-                    <EmptyState title={safeDisplayData.title} description={safeDisplayData.subtitle ?? "No output available"} />
-                  )}
-                </div>
+            <div className="space-y-8">
+              {Array.isArray(safeDisplayData.sections) && safeDisplayData.sections.length > 0 ? (
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => downloadPoster(blueprintRef, "Enterprise-Architecture-Blueprint")}
+                      className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                    >
+                      ⬇️ Download Architecture Blueprint
+                    </button>
+                  </div>
+                 
+                  {/* Single Unified Architecture Blueprint */}
+                  <div ref={blueprintRef}>
+                    <EnterpriseArchitectureBlueprint sections={safeDisplayData.sections} />
+                  </div>
+                </>
+              ) : (
+                <EmptyState
+                  title="No Output Available"
+                  description="Generate output from the Output stage to see enterprise deliverables"
+                />
+              )}
+            </div>
           )}
  
           {tab === "html" && (

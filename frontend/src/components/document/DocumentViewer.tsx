@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FileText, Package } from "lucide-react";
 import { Card } from "@/components/common/Card";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Loading } from "@/components/common/Loading";
@@ -7,6 +7,7 @@ import {
   getHeadingIcon,
   isArchitectureDisplayData,
   isDiscoveryDisplayData,
+  isOutputDisplayData,
   renderArchitectureSection,
 } from "@/components/document/ArchitectureRenderer";
 import {
@@ -206,6 +207,55 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
     );
   }
  
+  // ── Output Package rendering (Enterprise Solution Packaging Engine) ───
+  const isOutput = isOutputDisplayData(displayData.sections);
+ 
+  if (isOutput) {
+    return (
+      <Card className="overflow-hidden border-indigo-100 shadow-lg">
+        {/* Enterprise Header with premium gradient */}
+        <div className="border-b border-indigo-200 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-950">
+                {displayData.title ?? "Enterprise Solution Package"}
+              </h2>
+              {displayData.subtitle ? (
+                <p className="mt-1 text-sm text-slate-500">{displayData.subtitle}</p>
+              ) : (
+                <p className="mt-1 text-sm text-indigo-600">Consultant-Grade Architecture Deliverable</p>
+              )}
+            </div>
+          </div>
+        </div>
+ 
+        {/* Sections with enhanced styling */}
+        <div className="divide-y divide-slate-100">
+          {displayData.sections.map((section) => {
+            const icon = getHeadingIcon(section.heading);
+            return (
+              <section
+                key={section.heading ?? Math.random()}
+                className="p-5 sm:p-6"
+              >
+                <div className="mb-4 flex items-center gap-2">
+                  {icon}
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {section.heading ?? "Section"}
+                  </h3>
+                </div>
+                {renderArchitectureSection(section)}
+              </section>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  }
+ 
   // ── Default rendering for non-architecture stages ────────────────
   // Use renderArchitectureSection for all reports (supports knowledge sections)
   return (
@@ -240,4 +290,3 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
     </Card>
   );
 }
- 

@@ -17,7 +17,7 @@ from app.agents.validation_agent import (
     _build_validation_display_data,
     generate_validation,
 )
-from app.agents.output_agent import _build_output_display_data, generate_output
+from app.agents.output_agent import generate_output
  
  
 STAGE_ORDER = ["discovery", "knowledge", "recommendation", "architecture", "validation", "output"]
@@ -108,7 +108,13 @@ class WorkflowEngine:
         if stage == "validation":
             return _build_validation_display_data(agent_data)
         if stage == "output":
-            return _build_output_display_data(agent_data)
+            # Output display_data requires all upstream agent outputs to build.
+            # Use the pre-computed display_data stored during generation,
+            # or return empty display if not available.
+            stored_display = self.state.get("output_display_data")
+            if stored_display and isinstance(stored_display, dict) and stored_display.get("sections"):
+                return stored_display
+            return self._empty_display("Output Package")
  
         return self._empty_display()
  
@@ -280,6 +286,13 @@ class WorkflowEngine:
                     self.state.get("validation"),
                 )
                 agent_data, display_data = self._normalize_agent_result(result)
+                # Store output-specific data that cannot be rebuilt from agent_data alone
+                if display_data:
+                    self.state.set("output_display_data", display_data)
+                if isinstance(result, dict) and "downloads" in result:
+                    self.state.set("output_downloads", result["downloads"])
+                if isinstance(result, dict) and "quality_report" in result:
+                    self.state.set("output_quality_report", result["quality_report"])
             except Exception as exc:
                 logger.exception("Output generation failed")
                 return self._stage_generation_error_response("output", exc)
