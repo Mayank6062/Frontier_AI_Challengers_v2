@@ -6,7 +6,7 @@ from typing import Any
  
 from app.orchestrator.workflow_state import WorkflowState
 from app.services.llm import ask_llm
-from app.agents.discovery_agent import discover_requirement
+from app.agents.discovery_agent import discover_requirement, _build_discovery_display_data
 from app.agents.knowledge_agent import generate_knowledge
 from app.agents.recommendation_agent import generate_recommendation
 from app.agents.architecture_agent import (
@@ -84,6 +84,8 @@ class WorkflowEngine:
         if not stage or not isinstance(agent_data, dict) or not agent_data:
             return self._empty_display()
  
+        if stage == "discovery" and "agent_data" in agent_data:
+            agent_data = agent_data.get("agent_data") or {}
         if stage == "architecture" and "agent_data" in agent_data:
             agent_data = agent_data.get("agent_data") or {}
         if stage == "validation" and "agent_data" in agent_data:
@@ -92,15 +94,13 @@ class WorkflowEngine:
             agent_data = agent_data.get("agent_data") or {}
  
         if stage == "discovery":
-            from app.main import _build_discovery_display_data
- 
             return _build_discovery_display_data(agent_data)
         if stage == "knowledge":
-            from app.main import _build_knowledge_display_data
+            from app.agents.knowledge_agent import _build_knowledge_display_data
  
             return _build_knowledge_display_data(agent_data)
         if stage == "recommendation":
-            from app.main import _build_recommendation_display_data
+            from app.agents.recommendation_agent import _build_recommendation_display_data
  
             return _build_recommendation_display_data(agent_data)
         if stage == "architecture":
@@ -178,7 +178,7 @@ class WorkflowEngine:
         if stage == "discovery":
             try:
                 result = discover_requirement(self.state.get("requirement") or "")
-                agent_data, display_data = result, self._stage_display_data(stage, result)
+                agent_data, display_data = self._normalize_agent_result(result)
             except Exception as exc:
                 logger.exception("Discovery generation failed")
                 return self._stage_generation_error_response("discovery", exc)
@@ -188,7 +188,7 @@ class WorkflowEngine:
                 return self._missing_stage_data_response("knowledge", ["discovery"])
             try:
                 result = generate_knowledge(discovery)
-                agent_data, display_data = result, self._stage_display_data(stage, result)
+                agent_data, display_data = self._normalize_agent_result(result)
             except Exception as exc:
                 logger.exception("Knowledge generation failed")
                 return self._stage_generation_error_response("knowledge", exc)
@@ -215,7 +215,7 @@ class WorkflowEngine:
                 return self._missing_stage_data_response("recommendation", missing)
             try:
                 result = generate_recommendation(discovery, knowledge)
-                agent_data, display_data = result, self._stage_display_data(stage, result)
+                agent_data, display_data = self._normalize_agent_result(result)
             except Exception as exc:
                 logger.exception("After Recommendation Agent: response generated successfully? False")
                 return self._stage_generation_error_response("recommendation", exc)
@@ -438,4 +438,3 @@ New {change_type}:
             assistant_message="Workflow stopped by user.",
             next_expected_action="start_or_continue",
         )
- 

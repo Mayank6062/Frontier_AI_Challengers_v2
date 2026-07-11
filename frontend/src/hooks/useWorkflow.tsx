@@ -16,7 +16,7 @@ const initialDisplayData: DisplayData = {
       heading: "Document Viewer",
       type: "paragraph",
       content:
-        "Upload a requirement document to start the AI workflow. This panel renders display_data only.",
+        "Upload a requirement document to start the AI workflow",
     },
     {
       heading: "Instruction Examples",

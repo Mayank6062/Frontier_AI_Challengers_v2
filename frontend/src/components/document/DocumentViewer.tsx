@@ -6,6 +6,7 @@ import type { DisplayData, DisplaySection } from "@/types/workflow";
 import {
   getHeadingIcon,
   isArchitectureDisplayData,
+  isDiscoveryDisplayData,
   renderArchitectureSection,
 } from "@/components/document/ArchitectureRenderer";
 import {
@@ -98,6 +99,66 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
     );
   }
  
+  // ── Discovery Report Rendering ──────────────────────────────────
+  const isDiscovery = isDiscoveryDisplayData(displayData.sections);
+ 
+  // DEBUG: Log data structure
+  if (isDiscovery) {
+    console.log("🔍 DISCOVERY DATA RECEIVED:", {
+      title: displayData.title,
+      sectionCount: displayData.sections.length,
+      sections: displayData.sections.map(s => ({
+        heading: s.heading,
+        type: (s as Record<string, unknown>).type,
+        hasContent: !!s.content || !!(s as Record<string, unknown>).items || !!(s as Record<string, unknown>).data
+      }))
+    });
+  }
+ 
+  if (isDiscovery) {
+    return (
+      <Card className="overflow-hidden">
+        {/* Header */}
+        <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-950">
+                {displayData.title ?? "Requirement Discovery Report"}
+              </h2>
+              {displayData.subtitle ? (
+                <p className="mt-1 text-sm text-slate-500">{displayData.subtitle}</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+ 
+        {/* Sections */}
+        <div className="divide-y divide-slate-100">
+          {displayData.sections.map((section) => {
+            const icon = getHeadingIcon(section.heading);
+            return (
+              <section
+                key={section.heading ?? Math.random()}
+                className="p-5 sm:p-6"
+              >
+                <div className="mb-4 flex items-center gap-2">
+                  {icon}
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {section.heading ?? "Section"}
+                  </h3>
+                </div>
+                {renderArchitectureSection(section)}
+              </section>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  }
+ 
   // ── Architecture-specific rendering ──────────────────────────────
   const isArchitecture = isArchitectureDisplayData(displayData.sections);
  
@@ -146,6 +207,7 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
   }
  
   // ── Default rendering for non-architecture stages ────────────────
+  // Use renderArchitectureSection for all reports (supports knowledge sections)
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-slate-200 bg-white p-5 sm:p-6">
@@ -162,13 +224,20 @@ export function DocumentViewer({ displayData }: DocumentViewerProps) {
         </div>
       </div>
       <div className="divide-y divide-slate-100">
-        {displayData.sections.map((section) => (
-          <section key={section.heading ?? Math.random()} className="p-5 sm:p-6">
-            <h3 className="mb-3 text-base font-semibold text-slate-950">{section.heading ?? "Section"}</h3>
-            {renderSection(section)}
-          </section>
-        ))}
+        {displayData.sections.map((section) => {
+          const icon = getHeadingIcon(section.heading);
+          return (
+            <section key={section.heading ?? Math.random()} className="p-5 sm:p-6">
+              <div className="mb-4 flex items-center gap-2">
+                {icon}
+                <h3 className="text-base font-semibold text-slate-950">{section.heading ?? "Section"}</h3>
+              </div>
+              {renderArchitectureSection(section)}
+            </section>
+          );
+        })}
       </div>
     </Card>
   );
 }
+ 
