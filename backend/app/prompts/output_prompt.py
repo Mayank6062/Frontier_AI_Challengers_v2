@@ -201,101 +201,27 @@ Format as:
 DELIVERABLE 2: ENTERPRISE HTML REPORT
 ================================================================================
  
-Generate a COMPLETE, STANDALONE HTML file that looks like premium documentation
-from Microsoft Learn or the Azure Architecture Center.
+HTML generation is handled by a dedicated enterprise HTML generator module.
+The HTML will be generated automatically from the JSON data structure you provide.
  
-─── CSS DESIGN SYSTEM ───────────────────────────────────────────────────────────
+NOTE: You do NOT need to generate HTML content directly. Simply ensure your JSON
+output contains all required data fields with complete, synthesized content.
  
-Embed a design system in a <style> block using these CSS custom properties:
+The HTML generator will produce Microsoft Architecture Center quality documentation
+with:
+- Executive header and hero banner
+- Fixed sidebar navigation
+- Professional section layouts
+- Responsive tables and grids
+- Timeline visualizations
+- Risk matrices with color coding
+- Cost summaries with totals
+- Architecture diagrams
+- Quality score indicators
+- Print-optimized styling
  
-:root {
-  --color-primary: #0078D4;       /* Microsoft Azure blue */
-  --color-primary-dark: #005A9E;
-  --color-primary-light: #EFF6FF;
-  --color-accent: #0F172A;        /* Deep navy for headers */
-  --color-success: #107C10;
-  --color-warning: #C77A00;
-  --color-danger: #A80000;
-  --color-info: #0078D4;
-  --color-text: #1A1A1A;
-  --color-text-muted: #605E5C;
-  --color-border: #EDEBE9;
-  --color-surface: #FFFFFF;
-  --color-surface-alt: #F8F9FA;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
-  --radius: 6px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
-}
- 
-─── PAGE STRUCTURE ──────────────────────────────────────────────────────────────
- 
-Use this exact layout:
-1. A fixed left navigation sidebar (240px wide) with anchor links to each section.
-   The sidebar must collapse to a hamburger on screens < 768px.
-2. A main content area (max-width: 860px, centered, left-offset for sidebar).
-3. A hero banner at the top of main content: dark background, solution title in white,
-   a status badge (Approved / Approved With Recommendations / etc.), and the overall score.
- 
-─── COMPONENT LIBRARY ───────────────────────────────────────────────────────────
- 
-Implement these components with distinct visual styles:
- 
-CARDS (KPI / metric display):
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-top: 3px solid var(--color-primary); border-radius: var(--radius);
-  padding: 16px 20px; display: inline-flex; flex-direction: column;
- 
-CALLOUT BOXES (four types, each visually distinct):
-  .callout-info    { border-left: 4px solid var(--color-info);    background: #EFF6FF; }
-  .callout-warning { border-left: 4px solid var(--color-warning); background: #FFF8ED; }
-  .callout-success { border-left: 4px solid var(--color-success); background: #F0FDF0; }
-  .callout-danger  { border-left: 4px solid var(--color-danger);  background: #FFF0F0; }
-  Label each with an icon prefix: ℹ️ Note | ⚠️ Important | ✅ Best Practice | 🚨 Warning
- 
-STATUS BADGES:
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-  .badge-success  { background: #DFF6DD; color: var(--color-success); }
-  .badge-warning  { background: #FFF4CE; color: var(--color-warning); }
-  .badge-danger   { background: #FDE7E9; color: var(--color-danger);  }
-  .badge-info     { background: #EFF6FF; color: var(--color-primary); }
-  .badge-neutral  { background: #F3F2F1; color: #323130; }
- 
-TABLES:
-  thead { background: var(--color-accent); color: white; }
-  tbody tr:nth-child(even) { background: var(--color-surface-alt); }
-  All tables must have a caption row stating what the table shows.
- 
-COLLAPSIBLE SECTIONS:
-  Use <details><summary> elements for detailed subsections within each major section.
-  The <summary> must show a ▶ icon and the section title in bold.
- 
-TIMELINE:
-  Render the implementation roadmap as a CSS-only horizontal timeline:
-  A horizontal bar with phase markers (circles + labels) connected by a colored line.
-  Below each marker: phase name, duration, and 2-3 key deliverables as a mini-list.
- 
-SCORE INDICATORS:
-  Render architecture scores as horizontal progress bars:
-<div class="score-bar" style="width: X%"> with color driven by score band.
-  Show the numeric score and rating label next to the bar.
- 
-─── SECTION ORDER VARIATION ─────────────────────────────────────────────────────
- 
-VARY the order of sections based on content:
-- If validation score ≥ 90: open with Architecture Highlights, then Security, then Roadmap
-- If score 75-89: open with Executive Summary, then Key Recommendations, then Architecture
-- If score 60-74: open with Risk Summary prominently, then Roadmap for revision, then Architecture
-- Always end with Cost Summary and Next Steps regardless of score
- 
-─── CONTENT RULES ───────────────────────────────────────────────────────────────
- 
-• Technology Decisions section: use a 4-column comparison table (Technology | Category | Why Selected | Alternatives Rejected) for each major technology choice.
-• Business Benefits section: lead with a 3-column KPI card row (Metric | Current State | Target State), then narrative paragraphs.
-• Risk Summary: render as a table with columns (Risk | Severity | Likelihood | Mitigation | Owner | Timeline). Color the Severity cell using badge classes.
-• Cost Summary: include a table with a clearly labelled TOTAL row at the bottom.
-• Do NOT repeat wording used in the Markdown document. Write each deliverable independently.
+Your responsibility is to generate complete, accurate JSON data. The HTML generation
+engine will handle all visual presentation, layout, and styling automatically.
  
 ================================================================================
 DELIVERABLE 3: ENTERPRISE MARKDOWN DOCUMENT
@@ -999,255 +925,6 @@ with downstream renderers):
     "   - Business rule engines with specific rule frameworks",
     "   - Data quality frameworks with specific DQ dimensions measured",
     "   Example: 'Great Expectations framework validates 45 data quality rules including schema conformance, null checks, range validation, and referential integrity'",
-
-    ─── COLOR PALETTE CONSISTENCY ───────────────────────────────────────────────────
- 
-The color_palette defined at the top MUST be referenced in band background values.
-Do not use arbitrary hex values in bands. Use only colors from the palette or
-their light/dark variants. This creates visual coherence across the poster.
- 
-─── KPI AND PHASE RULES ─────────────────────────────────────────────────────────
- 
-kpis: Provide 3 to 5 items. Each must have a specific numeric or percentage target
-drawn from the validation inputs — never use placeholder values like "X%" or "TBD".
- 
-implementation_phases: Provide exactly 3 phases (Foundation / Core / Optimisation
-or equivalent). Each must have a specific duration (not "weeks" — name the sprint count
-or calendar timeframe) and a focus description of 8 words or fewer.
- 
-─── COMPLETE POSTER JSON FORMAT ─────────────────────────────────────────────────
- 
-Format as:
-{
-  "executive_poster": {
-    "title": "<Specific solution name from discovery>",
-    "subtitle": "<Industry — Architecture Pattern — Cloud Platform>",
-    "canvas": { "width": 2200, "height": 2400 },
-    "color_palette": {
-      "primary": "#0078D4",
-      "secondary": "#0F172A",
-      "accent": "#10B981",
-      "background": "#F8FAFC"
-    },
-    "sections": [
-      {
-        "band": "Business Context",
-        "y": 0,
-        "height": 280,
-        "background": "#FEF3C7",
-        "text_color": "#78350F",
-        "items": [
-          {
-            "component": "<Business Driver Title>",
-            "title": "<Business Driver Title>",
-            "description": "<Specific business need or pain point>",
-            "details": "<Additional context>"
-          }
-        ]
-      },
-      {
-        "band": "Source Systems",
-        "y": 280,
-        "height": 240,
-        "background": "#E0E7FF",
-        "text_color": "#3730A3",
-        "items": [...]
-      },
-      {
-        "band": "Ingestion Layer",
-        "y": 520,
-        "height": 240,
-        "background": "#DBEAFE",
-        "text_color": "#1E3A8A",
-        "items": [...]
-      },
-      {
-        "band": "Validation & Data Quality",
-        "y": 760,
-        "height": 240,
-        "background": "#F3E8FF",
-        "text_color": "#6B21A8",
-        "items": [...]
-      },
-      {
-        "band": "Processing & Transformation",
-        "y": 1000,
-        "height": 280,
-        "background": "#FBCFE8",
-        "text_color": "#831843",
-        "items": [...]
-      },
-      {
-        "band": "Storage & Data Lake",
-        "y": 1280,
-        "height": 280,
-        "background": "#DCFCE7",
-        "text_color": "#14532D",
-        "items": [...]
-      },
-      {
-        "band": "Analytics & Compute",
-        "y": 1560,
-        "height": 240,
-        "background": "#FED7AA",
-        "text_color": "#7C2D12",
-        "items": [...]
-      },
-      {
-        "band": "APIs & Consumption Layer",
-        "y": 1800,
-        "height": 200,
-        "background": "#FEE2E2",
-        "text_color": "#7F1D1D",
-        "items": [...]
-      },
-      {
-        "band": "Business Value & Outcomes",
-        "y": 2000,
-        "height": 240,
-        "background": "#D1FAE5",
-        "text_color": "#064E3B",
-        "items": [...]
-      },
-      {
-        "band": "🔒 Security & Compliance",
-        "y": 2240,
-        "height": 200,
-        "background": "#F1F5F9",
-        "text_color": "#1E293B",
-        "items": [...]
-      },
-      {
-        "band": "📊 Monitoring & Operations",
-        "y": 2440,
-        "height": 200,
-        "background": "#F8FAFC",
-        "text_color": "#334155",
-        "items": [...]
-      },
-      {
-        "band": "⚖️ Governance & Data Stewardship",
-        "y": 2640,
-        "height": 200,
-        "background": "#FAFAF9",
-        "text_color": "#44403C",
-        "items": [...]
-      }
-    ],
-    "kpis": [
-      {
-        "metric": "<Specific measurable outcome>",
-        "target": "<Specific number or percentage>",
-        "icon": "📊"
-      }
-    ],
-    "implementation_phases": [
-      {
-        "phase": "Foundation",
-        "duration": "6-8 weeks",
-        "focus": "Core infrastructure & ingestion pipelines"
-      },
-      {
-        "phase": "Core Platform",
-        "duration": "8-10 weeks",
-        "focus": "Data processing, storage, and analytics layer"
-      },
-      {
-        "phase": "Optimization",
-        "duration": "4-6 weeks",
-        "focus": "Performance tuning, monitoring, and governance"
-      }
-    ]
-  }
-}
- 
-================================================================================
-DELIVERABLE 6: SOLUTION PACKAGE METADATA
-================================================================================
- 
-{
-  "solution_metadata": {
-    "package_title": "<Specific solution title — matches executive_poster title>",
-    "package_subtitle": "<One-line description of what is being built and for whom>",
-    "industry": "<Detected industry from discovery inputs>",
-    "architecture_style": "<Event-Driven | Microservices | Serverless | CQRS | Layered | etc.>",
-    "cloud_platform": "<Azure | AWS | GCP | Multi-Cloud | Hybrid — specific>",
-    "technology_summary": ["<Top 5-8 named technologies, not categories>"],
-    "solution_complexity": "<Simple | Moderate | Complex | Enterprise>",
-    "solution_complexity_rationale": "<One sentence explaining the complexity rating>",
-    "estimated_timeline": "<Specific calendar range, e.g., '14–18 weeks'>",
-    "business_criticality": "<Low | Medium | High | Mission-Critical>",
-    "business_criticality_rationale": "<One sentence explaining the criticality rating>",
-    "confidence_score": <Integer 0-100: mirrors overall_score from validation agent>,
-    "architecture_score": <Integer 0-100: overall_score from validation agent — same value>,
-    "final_recommendation": "<Approved | Approved With Recommendations | Requires Revision | Rejected>",
-    "document_version": "1.0",
-    "generated_timestamp": "YYYY-MM-DDTHH:MM:SSZ",
-    "agent_pipeline_version": "2.0"
-  }
-}
- 
-NOTE on confidence_score vs architecture_score: both must equal the overall_score from the
-Validation Agent. They are preserved as separate fields for downstream display compatibility.
-NOTE on generated_timestamp: use the ISO 8601 format shown. The consuming application will
-replace this with the actual server timestamp at response time.
- 
-================================================================================
-COMPLETE OUTPUT JSON SCHEMA
-================================================================================
- 
-Return EXACTLY this JSON structure (keys and nesting unchanged — this is the contract
-with downstream renderers):
- 
-{
-  "executive_overview": { ... as defined above ... },
-  "executive_summary": "<String: 2-3 paragraph executive summary — written independently from HTML>",
-  "solution_overview": "<String: Solution description paragraph — leads with business outcome>",
- 
-  "high_level_design": [
-    "<Generate 8-12 rich HLD statements covering the complete architecture>",
-   
-    "HLD must cover ALL these areas with specific details:",
-    "1. SOURCE SYSTEMS - Name 3-4 specific source systems with their business purpose",
-    "   Example: 'SAP ECC 6.0 provides enterprise resource planning data including finance, inventory, and supply chain master data'",
-   
-    "2. INGESTION STRATEGY - Describe batch and/or streaming ingestion with protocols",
-    "   Example: 'Batch ingestion via Azure Data Factory orchestrates nightly full and incremental loads using native connectors and REST APIs'",
-   
-    "3. DATA LAKE ZONES - Explain the medallion architecture or multi-zone strategy",
-    "   Example: 'Three-layer data lake with Landing (raw ingestion), Bronze (unprocessed persistence), Silver (cleansed and validated), and Gold (business-ready aggregates)'",
-   
-    "4. PROCESSING PATTERNS - Describe ETL/ELT, streaming, event-driven patterns",
-    "   Example: 'Databricks orchestrates distributed Spark jobs for parallel transformation of terabyte-scale datasets with auto-scaling compute clusters'",
-   
-    "5. DATA QUALITY - Explain validation, cleansing, enrichment approach",
-    "   Example: 'Automated data quality framework validates schema compliance, applies business rules, detects duplicates, and flags PII for masking'",
-   
-    "6. ANALYTICS LAYER - Describe semantic modeling, BI, ML, and reporting",
-    "   Example: 'Power BI semantic layer provides pre-aggregated business metrics with row-level security for 500+ business users across 12 departments'",
-   
-    "7. INTEGRATION LAYER - Explain APIs, event publishing, downstream systems",
-    "   Example: 'RESTful API gateway exposes curated datasets to internal applications and external partners with OAuth2 authentication and rate limiting'",
-   
-    "8. CROSS-CUTTING CONCERNS - Security, monitoring, governance at conceptual level",
-    "   Example: 'End-to-end encryption for data at-rest and in-transit, centralized logging with Azure Monitor, and automated data lineage tracking via Azure Purview'"
-  ],
- 
-  "low_level_design": [
-    "<Generate 15-25 rich LLD statements with specific technical details>",
-   
-    "LLD must cover ALL these areas with SPECIFIC technical choices:",
-    "1. INGESTION COMPONENTS (4-5 items)",
-    "   - Azure Data Factory pipelines with specific connectors, schedules, retry policies",
-    "   - Event Hub namespaces with partition count, retention, throughput units",
-    "   - API Management gateways with specific policies, caching, rate limits",
-    "   Example: 'Azure Event Hub Standard tier with 32 partitions, 7-day retention, auto-inflate to 20 throughput units for IoT device telemetry streams'",
-   
-    "2. VALIDATION COMPONENTS (3-4 items)",
-    "   - Schema validation engines with specific validation libraries",
-    "   - Business rule engines with specific rule frameworks",
-    "   - Data quality frameworks with specific DQ dimensions measured",
-    "   Example: 'Great Expectations framework validates 45 data quality rules including schema conformance, null checks, range validation, and referential integrity'",
    
     "3. PROCESSING COMPONENTS (4-6 items)",
     "   - Databricks clusters with specific node types, cluster policies",
@@ -1586,13 +1263,27 @@ with downstream renderers):
     "network": "<Mermaid — graph LR VNet topology>"
   },
   "downloads": {
-    "html": "<Complete HTML report — standalone, no external dependencies>",
+    "html": "HTML will be generated by enterprise HTML generator",
     "markdown": "<Complete Markdown document — publication-ready>",
     "terraform": "<Complete Terraform code — production-starter quality>"
   },
   "executive_poster": { ... as defined above ... },
   "solution_metadata": { ... as defined above ... }
 }
+ 
+CRITICAL - DOWNLOADS REQUIREMENT:
+ALL THREE download fields (html, markdown, terraform) MUST be present in your JSON output.
+ 
+- html: Use the exact string "HTML will be generated by enterprise HTML generator"
+  (It will be replaced automatically by the HTML generation module)
+ 
+- markdown: Generate a COMPLETE publication-ready Markdown document following all
+  specifications in DELIVERABLE 3 above
+ 
+- terraform: Generate COMPLETE production-ready Terraform code following all
+  specifications in DELIVERABLE 4 above
+ 
+Missing any of these fields will cause validation failure.
  
 COST REPORT: The final entry in cost_report must always be:
 { "category": "TOTAL", "item": "All Resources", "estimate": "$X,XXX/month", "notes": "Annual equivalent: $XX,XXX" }
@@ -1613,23 +1304,15 @@ QUALITY GATES — VERIFY BEFORE RETURNING
  
 ✓ Executive Overview has a contextually invented title (not "Enterprise Architecture Solution")
 ✓ Executive Overview sections are 4-7, chosen based on content — not a fixed template
-✓ HTML hero banner shows solution name + validation status badge + overall score
-✓ HTML sidebar navigation links to all 11 sections
-✓ HTML uses only CSS custom properties defined in :root — no hardcoded color values in components
-✓ HTML Technology Decisions section uses the 4-column comparison table
-✓ HTML Risk section uses colored badge cells, not plain text
-✓ HTML Cost section has a TOTAL row
-✓ HTML and Markdown use demonstrably different wording throughout
 ✓ Markdown Decision Log has minimum 5 rows with rejected alternatives named
 ✓ Markdown Technology Stack table includes Vendor Lock-in Risk column
 ✓ Terraform uses name_prefix local for all resource names
 ✓ Terraform has required_tags local applied to every taggable resource
 ✓ Terraform has lifecycle.prevent_destroy on all stateful resources
 ✓ Terraform provider version uses ~> (pessimistic constraint) not >=
-✓ Executive Poster has 8-12 bands (not the exhaustive fixed list)
-✓ Every poster item has both label and description — no label-only items
+✓ Executive Poster has 12 bands (all mandatory bands included)
+✓ Every poster item has all required fields: component, title, description, details
 ✓ Poster y values are cumulative (each band starts where the previous ends)
-✓ Poster height values are proportional to item count (80px base + 40px per item)
 ✓ KPI targets are specific numbers — no "X%" or "TBD"
 ✓ No forbidden words used anywhere (robust, leverage, utilize, streamline, cutting-edge)
 ✓ HLD items contain no version numbers or config values
@@ -1637,6 +1320,11 @@ QUALITY GATES — VERIFY BEFORE RETURNING
 ✓ cost_report final entry is TOTAL row
 ✓ solution_metadata.confidence_score == solution_metadata.architecture_score == validation overall_score
 ✓ All six Mermaid diagrams use different layout directions or diagram types
+✓ No placeholder content (Context 1, Lorem ipsum, [object Object], etc.)
+✓ All sections synthesized from actual agent data, not copied from prompt examples
+ 
+NOTE: HTML quality is validated by the enterprise HTML generator module.
+HTML structure, styling, navigation, and components are automatically enforced.
  
 ================================================================================
 RETURN ONLY VALID JSON — NO EXPLANATIONS OUTSIDE THE JSON

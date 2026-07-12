@@ -921,7 +921,7 @@ export function renderArchitectureSection(section: DisplaySection): ReactNode {
   if (sectionType === "compliance_cards") {
     const items = (sectionAny.items as any[]) ?? [];
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {items.map((item, idx) => {
           const statusColors = {
             "Compliant": { bg: "from-emerald-50 to-green-100/50", border: "emerald-400", badge: "bg-emerald-600 text-white", icon: "✓" },

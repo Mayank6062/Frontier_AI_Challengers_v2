@@ -38,6 +38,8 @@ from dotenv import load_dotenv
 from openai import APITimeoutError, AzureOpenAI, OpenAIError
  
 from app.prompts.output_prompt import OUTPUT_SYSTEM_PROMPT
+from app.models.enterprise_blueprint import normalize_agent_outputs
+from app.renderers import render_html, render_markdown, render_terraform
  
  
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
@@ -668,6 +670,12 @@ def _parse_output_json(
     if not isinstance(result, dict):
         raise OutputInvalidJSONError("Output generation agent JSON must be an object")
  
+    # 0. Pre-inject empty defaults for downloads and diagrams (enterprise renderers will replace these)
+    if "downloads" not in result:
+        result["downloads"] = {k: "" for k in DOWNLOAD_FIELDS}
+    if "diagrams" not in result:
+        result["diagrams"] = {k: "" for k in DIAGRAM_FIELDS}
+ 
     # 1. Required top-level fields
     missing = OUTPUT_FIELDS - set(result)
     if missing:
@@ -984,7 +992,7 @@ def _build_downloads_section(output: dict[str, Any]) -> dict[str, Any]:
         "type": ST_DOWNLOADS,
         "downloads": assets,
     }
- 
+  
  
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION ORCHESTRATOR — dynamic ordering by validation score
@@ -1179,6 +1187,44 @@ def generate_output(
     display_data = _build_output_display_data(
         agent_data, discovery, knowledge, recommendation, architecture, validation
     )
+   
+    # ═══════════════════════════════════════════════════════════════════════
+    # UNIFIED RENDERING ENGINE — All outputs from single normalized model
+    # ═══════════════════════════════════════════════════════════════════════
+    try:
+        # Ensure downloads dict exists (should have been injected during parsing)
+        if "downloads" not in agent_data:
+            agent_data["downloads"] = {k: "" for k in DOWNLOAD_FIELDS}
+       
+        # Step 1: Normalize all agent outputs into unified Enterprise Blueprint
+        blueprint = normalize_agent_outputs(
+            discovery=discovery,
+            knowledge=knowledge,
+            recommendation=recommendation,
+            architecture=architecture,
+            validation=validation,
+            output=agent_data
+        )
+       
+        # Step 2: Render all 4 output formats from the same blueprint
+        enterprise_html = render_html(blueprint)
+        enterprise_markdown = render_markdown(blueprint)
+        enterprise_terraform = render_terraform(blueprint)
+       
+        # Step 3: Replace LLM-generated downloads with enterprise-quality renders
+        agent_data["downloads"]["html"] = enterprise_html
+        agent_data["downloads"]["markdown"] = enterprise_markdown
+        agent_data["downloads"]["terraform"] = enterprise_terraform
+       
+    except Exception as e:
+        # Log error but don't fail the entire output generation
+        # Keep the LLM-generated content as fallback
+        import traceback
+        print(f"Warning: Enterprise rendering failed: {e}")
+        print(traceback.format_exc())
+        # Fallback: ensure downloads exist even if rendering failed
+        if "downloads" not in agent_data:
+            agent_data["downloads"] = {k: "Error: Content generation failed" for k in DOWNLOAD_FIELDS}
  
     return {
         "agent_data":     agent_data,
