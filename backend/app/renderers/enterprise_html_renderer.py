@@ -172,51 +172,34 @@ def _render_layer(layer: ArchitectureLayer) -> str:
  
  
 def _render_component_card(component: LayerComponent) -> str:
-    """Render single component card with all business and technical details."""
+    """
+    Render single component card - CONCISE (3-5 lines max).
+    Only render fields that are explicitly set and meaningful.
+    """
     sections = []
    
-    # Purpose (always included)
+    # Purpose (most important)
     if component.purpose:
         sections.append(f"<p><strong>Purpose:</strong> {component.purpose}</p>")
    
-    # Technology
+    # Technology stack
     if component.technology:
         sections.append(f"<p><strong>Technology:</strong> {component.technology}</p>")
    
-    # Protocols
+    # Protocols OR Performance (choose one)
     if component.protocols:
         sections.append(f"<p><strong>Protocols:</strong> {component.protocols}</p>")
-   
-    # Expected Volume
-    if component.expected_volume:
-        sections.append(f"<p><strong>Expected Volume:</strong> {component.expected_volume}</p>")
-   
-    # Data Formats/Inputs
-    if component.data_formats or component.inputs:
-        formats = component.data_formats or component.inputs
-        sections.append(f"<p><strong>Data Formats:</strong> {formats}</p>")
-   
-    # Business Owner
-    if component.business_owner:
-        sections.append(f"<p><strong>Business Owner:</strong> {component.business_owner}</p>")
-   
-    # Performance
-    if component.performance:
+    elif component.performance:
         sections.append(f"<p><strong>Performance:</strong> {component.performance}</p>")
    
-    # Monitoring
-    if component.monitoring:
-        sections.append(f"<p><strong>Monitoring:</strong> {component.monitoring}</p>")
-   
-    # Business Value
-    if component.business_value:
+    # Security OR Business Value (choose one)
+    if component.security:
+        sections.append(f"<p><strong>Security:</strong> {component.security}</p>")
+    elif component.business_value:
         sections.append(f"<p><strong>Business Value:</strong> {component.business_value}</p>")
    
-    # Business Challenges
-    if component.business_challenges:
-        sections.append(f"<p><strong>Business Challenges:</strong> {component.business_challenges}</p>")
-   
-    card_content = "\n    ".join(sections)
+    # Maximum 4 fields per card to keep it concise like enterprise architecture posters
+    card_content = "\n    ".join(sections[:4])
    
     return f"""<div class="component-card">
     <h3>{component.title}</h3>
@@ -226,17 +209,17 @@ def _render_component_card(component: LayerComponent) -> str:
  
 def _render_placeholder_cards(layer_number: int) -> str:
     """Render placeholder cards when layer components are not populated yet."""
-    # Card counts per layer: 6, 4, 6, 4, 4, 4, 4
-    card_counts = {1: 6, 2: 4, 3: 6, 4: 4, 5: 4, 6: 4, 7: 4}
+    # Card counts per layer: 5-8, 4-6, 5-7, 4, 4, 4, 4
+    card_counts = {1: 6, 2: 5, 3: 6, 4: 4, 5: 4, 6: 4, 7: 4}
     count = card_counts.get(layer_number, 4)
    
     cards = []
     for i in range(count):
         cards.append(f"""<div class="component-card">
     <h3>Component {i+1}</h3>
-    <p><strong>Purpose:</strong> Enterprise-grade component with comprehensive business and technical capabilities.</p>
-    <p><strong>Technology:</strong> Cloud-native architecture leveraging modern best practices.</p>
-    <p><strong>Business Value:</strong> Delivers measurable business outcomes through operational excellence.</p>
+    <p><strong>Purpose:</strong> Component pending agent extraction.</p>
+    <p><strong>Technology:</strong> To be determined from requirements.</p>
+    <p><strong>Status:</strong> Awaiting intelligent synthesis from discovery.</p>
 </div>""")
    
     return "\n\n".join(cards)
@@ -418,4 +401,3 @@ def _render_footer(bp: EnterpriseBlueprint) -> str:
         </div>
     </div>
 </footer>"""
- 

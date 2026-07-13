@@ -39,6 +39,8 @@ from openai import APITimeoutError, AzureOpenAI, OpenAIError
  
 from app.prompts.output_prompt import OUTPUT_SYSTEM_PROMPT
 from app.models.enterprise_blueprint import normalize_agent_outputs
+from app.models.markdown_blueprint import normalize_for_markdown
+from app.models.terraform_blueprint import normalize_for_terraform
 from app.renderers import render_html, render_markdown, render_terraform
  
  
@@ -992,7 +994,6 @@ def _build_downloads_section(output: dict[str, Any]) -> dict[str, Any]:
         "type": ST_DOWNLOADS,
         "downloads": assets,
     }
-  
  
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION ORCHESTRATOR — dynamic ordering by validation score
@@ -1189,15 +1190,21 @@ def generate_output(
     )
    
     # ═══════════════════════════════════════════════════════════════════════
-    # UNIFIED RENDERING ENGINE — All outputs from single normalized model
+    # SEPARATION OF CONCERNS RENDERING ENGINE
     # ═══════════════════════════════════════════════════════════════════════
+    # Each renderer receives its own independent blueprint.
+    # No renderer affects another renderer.
+    # Blueprints do not inherit from each other.
     try:
         # Ensure downloads dict exists (should have been injected during parsing)
         if "downloads" not in agent_data:
             agent_data["downloads"] = {k: "" for k in DOWNLOAD_FIELDS}
        
-        # Step 1: Normalize all agent outputs into unified Enterprise Blueprint
-        blueprint = normalize_agent_outputs(
+        # Step 1: Create THREE independent blueprints from the SAME agent outputs
+        # Each blueprint is a separate data model with no inheritance
+       
+        # EnterpriseBlueprint: For HTML and Overview rendering
+        enterprise_blueprint = normalize_agent_outputs(
             discovery=discovery,
             knowledge=knowledge,
             recommendation=recommendation,
@@ -1206,10 +1213,30 @@ def generate_output(
             output=agent_data
         )
        
-        # Step 2: Render all 4 output formats from the same blueprint
-        enterprise_html = render_html(blueprint)
-        enterprise_markdown = render_markdown(blueprint)
-        enterprise_terraform = render_terraform(blueprint)
+        # MarkdownBlueprint: For Markdown documentation generation (independent)
+        markdown_blueprint = normalize_for_markdown(
+            discovery=discovery,
+            knowledge=knowledge,
+            recommendation=recommendation,
+            architecture=architecture,
+            validation=validation,
+            output=agent_data
+        )
+       
+        # TerraformBlueprint: For Terraform infrastructure code generation (independent)
+        terraform_blueprint = normalize_for_terraform(
+            discovery=discovery,
+            knowledge=knowledge,
+            recommendation=recommendation,
+            architecture=architecture,
+            validation=validation,
+            output=agent_data
+        )
+       
+        # Step 2: Render all outputs from their respective blueprints
+        enterprise_html = render_html(enterprise_blueprint)
+        enterprise_markdown = render_markdown(markdown_blueprint)
+        enterprise_terraform = render_terraform(terraform_blueprint)
        
         # Step 3: Replace LLM-generated downloads with enterprise-quality renders
         agent_data["downloads"]["html"] = enterprise_html
